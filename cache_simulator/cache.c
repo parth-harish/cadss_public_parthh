@@ -117,7 +117,7 @@ cache* init(cache_sim_args* csa)
     int opt;
     int s = 0, E = 0, b = 0, R = 0;
 
-    while ((opt = getopt(csa->arg_count, csa->arg_list, "E:s:b:i:R:")) != -1)
+    while ((opt = getopt(csa->arg_count, csa->arg_list, "E:s:b:R:")) != -1) // Removed 'i' option
     {
         switch (opt)
         {
@@ -133,8 +133,6 @@ cache* init(cache_sim_args* csa)
             case 'R':
                 R = atoi(optarg);
                 use_RRIP = true;
-                break;
-            case 'i':
                 break;
         }
     }
