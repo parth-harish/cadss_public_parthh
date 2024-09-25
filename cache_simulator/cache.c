@@ -21,7 +21,7 @@ typedef struct {
     cache_line* lines;      // Array of cache lines in the set
 } cache_set;
 
-cache* self = NULL;          // Cache object itself
+cache* self = NULL;          // Cache object 
 static cache_set* sets = NULL; // Pointer to the array of cache sets
 static int num_sets = 0;     // Number of sets in the cache
 static int lines_per_set = 0; // Number of lines per set (associativity)
@@ -138,7 +138,6 @@ cache* init(cache_sim_args* csa) {
         }
     }
 
-    // Calculate the actual values from the parsed parameters
     num_sets = 1 << s;       // Number of sets in the cache
     lines_per_set = E;       // Lines per set (associativity)
     block_size = 1 << b;     // Size of each cache block
@@ -213,7 +212,6 @@ void memoryRequest(trace_op* op, int processorNum, int64_t tag,
 
     uint8_t perm = coherComp->permReq((op->op == MEM_LOAD), addr, processorNum);
 
-    // Create and add a pending request to the appropriate list
     pendingRequest* pr = malloc(sizeof(pendingRequest));
     pr->tag = tag;
     pr->addr = addr;
