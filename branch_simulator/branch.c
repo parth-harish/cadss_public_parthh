@@ -13,13 +13,12 @@ branch* self = NULL;
 
 // Simulator parameters
 int predictorSize = 0;    // Log2 of the predictor size
-int bhrSize = 0;          // Size of the Branch History Register (BHR)
-int predictorModel = 0;   // Predictor model (0: 2-bit, 2: GSELECT)
+int bhrSize = 0;          // Size of the Branch History Register (ignored in this implementation)
+int predictorModel = 0;   // Predictor model (only 2-bit predictor is implemented)
 int processorCount = 1;   // Number of processors (currently unused)
 
 // Predictor data structures
 uint8_t* predictorTable = NULL; // Predictor table of 2-bit saturating counters
-uint32_t bhr = 0;               // Branch History Register
 
 // Function declarations
 uint64_t branchRequest(trace_op* op, int processorNum);
@@ -32,7 +31,7 @@ branch* init(branch_sim_args* csa)
 {
     int op;
 
-    // TODO - get argument list from assignment
+    // Parse command-line arguments
     while ((op = getopt(csa->arg_count, csa->arg_list, "p:s:b:g:")) != -1)
     {
         switch (op)
@@ -47,12 +46,12 @@ branch* init(branch_sim_args* csa)
                 predictorSize = atoi(optarg);
                 break;
 
-            // BHR size
+            // BHR size (ignored in this implementation)
             case 'b':
                 bhrSize = atoi(optarg);
                 break;
 
-            // Predictor model
+            // Predictor model (only model 0 is implemented)
             case 'g':
                 predictorModel = atoi(optarg);
                 break;
@@ -62,23 +61,14 @@ branch* init(branch_sim_args* csa)
     // Initialize predictor table
     int numEntries = 1 << predictorSize;
     predictorTable = malloc(numEntries * sizeof(uint8_t));
-    if (predictorTable == NULL) {
-        fprintf(stderr, "Failed to allocate predictor table\n");
-        exit(EXIT_FAILURE);
-    }
+   
     for (int i = 0; i < numEntries; i++) {
         predictorTable[i] = 1; // Each counter defaults to state '01' (weakly not taken)
     }
 
-    // Initialize BHR
-    bhr = 0; // Initialize the Branch History Register to zero
-
     // Initialize branch struct
     self = malloc(sizeof(branch));
-    if (self == NULL) {
-        fprintf(stderr, "Failed to allocate branch struct\n");
-        exit(EXIT_FAILURE);
-    }
+
     self->branchRequest = branchRequest;
     self->si.tick = tick;
     self->si.finish = finish;
@@ -93,30 +83,9 @@ uint64_t branchRequest(trace_op* op, int processorNum)
     assert(op != NULL);
 
     uint64_t pc = op->pcAddress >> 3; // Ignore the 3 least significant bits
-    uint32_t index = 0;
 
-    // Variables for indexing
-    uint32_t pcIndexBits = pc & ((1 << predictorSize) - 1);
-    uint32_t bhrMask = (1 << bhrSize) - 1;
-
-    if (predictorModel == 0) {
-        // 2-bit saturating counter predictor
-        index = pcIndexBits;
-    } else if (predictorModel == 2) {
-        // GSELECT predictor
-        // Ensure BHR size is not larger than predictor size
-        if (bhrSize > predictorSize) {
-            fprintf(stderr, "BHR size cannot be larger than predictor size in GSELECT\n");
-            exit(EXIT_FAILURE);
-        }
-
-        // Extract BHR bits and PC bits for indexing
-        uint32_t bhrBits = bhr & bhrMask;
-        uint32_t pcBits = pcIndexBits & ((1 << (predictorSize - bhrSize)) - 1);
-
-        // Concatenate PC bits and BHR bits to form the index
-        index = (pcBits << bhrSize) | bhrBits;
-    }
+    // Calculate index using PC bits
+    uint32_t index = pc & ((1 << predictorSize) - 1);
 
     // Get the counter value from the predictor table
     uint8_t counter = predictorTable[index];
@@ -144,24 +113,15 @@ uint64_t branchRequest(trace_op* op, int processorNum)
         if (predictorTable[index] > 0) predictorTable[index]--;
     }
 
-    // Update BHR for GSELECT predictor
-    if (predictorModel == 2 && bhrSize > 0) {
-        // Shift in the actual outcome into the BHR
-        bhr = ((bhr << 1) | actualOutcome) & bhrMask;
-    }
-
     // Return the predicted address
     return predAddress;
 }
 
-// Called every tick (not used in this simulator)
 int tick()
 {
-    // For this simulator, tick doesn't perform any action.
     return 1;
 }
 
-// Finalize the simulation (no statistics printed)
 int finish(int outFd)
 {
     return 0;
