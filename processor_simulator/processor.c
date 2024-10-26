@@ -27,31 +27,6 @@ int fast_alus = 1;            // Number of fast ALUs
 int long_alus = 1;            // Number of long ALUs
 int num_cdbs = 1;             // Number of Common Data Buses (CDBs)
 
-// Dispatch and scheduling queue structures
-typedef struct {
-    trace_op* ops[DISPATCH_QUEUE_SIZE];
-    int front;
-    int rear;
-    int count;
-} DispatchQueue;
-
-typedef struct {
-    trace_op* ops[SCHEDULING_QUEUE_SIZE];
-    int front;
-    int rear;
-    int count;
-} SchedulingQueue;
-
-DispatchQueue dispatchQueue;
-SchedulingQueue schedulingQueue;
-
-// CDB management
-int available_cdbs;
-
-// Statistics tracking
-int64_t totalCycles = 0;
-int totalInstructions = 0;
-int instructionsFired = 0;
 
 //
 // init
@@ -109,10 +84,6 @@ processor* init(processor_sim_args* psa)
     memOpTag = calloc(processorCount, sizeof(int64_t));
 
     self = calloc(1, sizeof(processor));
-
-    dispatchQueue.front = dispatchQueue.rear = dispatchQueue.count = 0;
-    schedulingQueue.front = schedulingQueue.rear = schedulingQueue.count = 0;
-
     return self;
 
     self->fetch_rate = fetch_rate;
@@ -121,43 +92,6 @@ processor* init(processor_sim_args* psa)
     self->fast_alus = fast_alus;
     self->long_alus = long_alus;
     self->num_cdbs = num_cdbs;
-}
-
-// Helper functions for dispatch and scheduling queues
-void enqueue_dispatch(DispatchQueue* queue, trace_op* op) {
-    if (queue->count < DISPATCH_QUEUE_SIZE) {
-        queue->ops[queue->rear] = op;
-        queue->rear = (queue->rear + 1) % DISPATCH_QUEUE_SIZE;
-        queue->count++;
-    }
-}
-
-trace_op* dequeue_dispatch(DispatchQueue* queue) {
-    trace_op* op = NULL;
-    if (queue->count > 0) {
-        op = queue->ops[queue->front];
-        queue->front = (queue->front + 1) % DISPATCH_QUEUE_SIZE;
-        queue->count--;
-    }
-    return op;
-}
-
-void enqueue_schedule(SchedulingQueue* queue, trace_op* op) {
-    if (queue->count < SCHEDULING_QUEUE_SIZE) {
-        queue->ops[queue->rear] = op;
-        queue->rear = (queue->rear + 1) % SCHEDULING_QUEUE_SIZE;
-        queue->count++;
-    }
-}
-
-trace_op* dequeue_schedule(SchedulingQueue* queue) {
-    trace_op* op = NULL;
-    if (queue->count > 0) {
-        op = queue->ops[queue->front];
-        queue->front = (queue->front + 1) % SCHEDULING_QUEUE_SIZE;
-        queue->count--;
-    }
-    return op;
 }
 
 const int64_t STALL_TIME = 100000;
@@ -257,8 +191,13 @@ int tick(void)
                 break;
 
             case ALU:
-            case ALU_LONG:
+                // Simple ALU operation
+                instructionsFired++;
+                break;
 
+            case ALU_LONG:
+                // Long ALU operation
+                instructionsFired++;
                 break;
         }
 
