@@ -84,7 +84,6 @@ processor* init(processor_sim_args* psa)
     memOpTag = calloc(processorCount, sizeof(int64_t));
 
     self = calloc(1, sizeof(processor));
-    return self;
 
     self->fetch_rate = fetch_rate;
     self->dispatch_mult = dispatch_mult;
@@ -92,6 +91,9 @@ processor* init(processor_sim_args* psa)
     self->fast_alus = fast_alus;
     self->long_alus = long_alus;
     self->num_cdbs = num_cdbs;
+
+    return self;
+
 }
 
 const int64_t STALL_TIME = 100000;
